@@ -148,7 +148,7 @@ def get_properties(apikey, seed=None, host, database, user=None,
     # Loop through zpid and populate comps until exhausted  -------------------
     # TODO: Keep a list of zpid whose comps we've already requested
     checked_zpids = []
-    for i in range(6):
+    for i in range(10):
         print('Loop # {}'.format(i))
         conn = sqlite3.connect(dbfile)
         c = conn.cursor()
@@ -188,6 +188,8 @@ def get_properties(apikey, seed=None, host, database, user=None,
                     r.find('limit-warning').text == 'true'):
                 print('Reached api limit. Waiting 24 hours')
                 time.sleep(24 * 60 * 60)  # Reached limit, wait 24 hours
+            if r.code.text != '0':
+                continue
             comp_details = []
             for comp in r.response.properties.find_all('comp'):
                 comp_details.append(
@@ -217,6 +219,11 @@ def get_properties(apikey, seed=None, host, database, user=None,
             if (r.find('limit-warning') is not None and
                     r.find('limit-warning') == 'true'):
                 break
+
+
+def get_properties(apikey, host, database, user=None,
+                       password=None):
+    baseurl = 'http://www.zillow.com/webservice/'
     # Populate property details -----------------------------------------------
     q = '''
         UPDATE properties
@@ -302,30 +309,3 @@ def get_properties(apikey, seed=None, host, database, user=None,
         ))
         conn.commit()
         conn.close()
-        # INSERT OR IGNORE INTO properties (
-        #     zpid,
-        #     street,
-        #     city,
-        #     state,
-        #     zip,
-        #     FIPScounty,
-        #     useCode,
-        #     taxAssessmentYear,
-        #     taxAssessment,
-        #     yearBuilt,
-        #     lotSizeSqFt,
-        #     finishedSqFt,
-        #     bathrooms,
-        #     bedrooms,
-        #     lastSoldDate,
-        #     lastSoldPrice,
-        #     zestimate,
-        #     zestimateLastUpdated,
-        #     zestimateValueChange,
-        #     zestimateValueLow,
-        #     zestimateValueHigh,
-        #     zestimatePercentile,
-        #     region
-        # )
-        # VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-        #         ?, ?, ?)'''
