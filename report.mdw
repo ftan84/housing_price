@@ -66,11 +66,14 @@ for cannot be extracted from one API endpoint. Zillow does not provide an
 endpoint which returns property information of comps given a seed property.
 What it provides instead is one endpoint that returns a list of comp property
 IDs (Zillow Property ID or ZPID) given a seed property address and a separate
-endpoint that returns property information given a ZPID. Thus the collection
-process is divided into two steps:
+endpoint that returns property information given a ZPID. Furthermore, the
+comp endpoint returns a maximum of 25 comps per seed property. Thus the
+collection process is divided into three steps:
 
 1. Collect comp IDs given a property address using _GetDeepSearchResults_.
-2. Collect property information for each ZPID collected using
+2. Loop through each ZPID, collect 25 more comps for each, and append results
+   list of the rest of the ZPIDs.
+3. Collect property information for each ZPID collected using
    _GetDeepComps_.
 
 The second limitation is that Zillow has limited the number of calls allowed
