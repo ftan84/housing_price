@@ -72,7 +72,7 @@ collection process is divided into three steps:
 
 1. Collect comp IDs given a property address using _GetDeepSearchResults_.
 2. Loop through each ZPID, collect 25 more comps for each, and append results
-   list of the rest of the ZPIDs.
+   to list of the other ZPIDs.
 3. Collect property information for each ZPID collected using
    _GetDeepComps_.
 
