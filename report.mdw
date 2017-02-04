@@ -81,3 +81,9 @@ significant amount of data. This limits our collection process further since
 we had to resort to making two calls. A simple solution was to include a sleep
 timer of 24 hours when a call encounters a rate limit warning. Although somewhat
 inconvenient, the solution achieved what we needed to accomplish.
+
+## Data Processing
+
+The next step is to process or clean the data. We can immediately see that
+we need to convert many of these factor variables into dummy variables. This is
+easily achieved in Pandas using the _get\_dummies()_ function.
