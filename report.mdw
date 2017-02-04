@@ -1,5 +1,5 @@
 % Greater Seattle Area Housing: Sales Price Prediction
-% Francis A. Tan
+% Francis Tan
 % 2017-02-27
 
 << echo = False >>=
@@ -72,3 +72,10 @@ process is divided into two steps:
 1. Collect comp IDs given a property address using _GetDeepSearchResults_.
 2. Collect property information for each ZPID collected using
    _GetDeepComps_.
+
+The second limitation is that Zillow has limited the number of calls allowed
+per day to 1000. This poses a problem if one's intent was to collect a
+significant amount of data. This limits our collection process further since
+we had to resort to making two calls. A simple solution was to include a sleep
+timer of 24 hours when a call encounters a rate limit warning. Although somewhat
+inconvenient, the solution achieved what we needed to accomplish.
