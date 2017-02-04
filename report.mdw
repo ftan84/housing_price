@@ -8,12 +8,6 @@ import pandas as pd
 import pprint
 import pweave
 import sqlite3
-
-# pweave.rcParams["chunk"]["defaultoptions"].update(
-#     {
-#         'term': True,
-#     }
-# )
 @
 
 # Summary
@@ -53,7 +47,7 @@ Finally, printing the _columns_ attribute produces a list of all column names.
 df.columns
 @
 
-## Collection Process
+## Data Collection Process
 Although the availability of a public API has made the data collection process
 simple, there are some limitations that we had to be cognizant of. Our vision
 was to start with a "seed" property which in turn would collect "comps" or
