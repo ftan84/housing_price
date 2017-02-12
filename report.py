@@ -13,6 +13,18 @@
 #'     - \usepackage{longtable}
 #' ---
 
+#' # Introduction
+#' The Greater Seattle Area housing market has gone through a dramatic price
+#' increase in recent years with the median valuation at $609,100, an 11.3%
+#' increase from last year and a 4.7% increase forecasted for the next year[^1].
+#' Because of the dramatic change that has occurred in a short period of
+#' time, it has become increasingly difficult to predict property values. We
+#' believe that a machine learning model can predict a property value with
+#' reasonable accuracy given the property features and the time aspect
+#' (_lastSoldDate_).
+
+#' [^1]: Source: Zillow Data as of February 2017.
+
 #+ echo=False
 import numpy as np
 import pandas as pd
@@ -22,6 +34,10 @@ import sqlite3
 
 #' # Data Collection and Preprocessing
 #' ## Data Collection Process
+#' The most important element of any data science project is the data itself.
+#' This project heavily utilizes data from Zillow, a digital real estate
+#' destination for buyers, sellers, and agents. Fortunately, Zillow provides
+#' a public API which provides a convenience to an otherwise tedious task.
 #' Although the availability of a public API has made the data collection
 #' process simple, there are some limitations that we had to be cognizant of.
 #' Our vision was to start with a "seed" property which in turn would
@@ -53,13 +69,9 @@ import sqlite3
 #' needed to accomplish.
 #' 
 #' ## Training Data
-#' The most important element of any data science project is the data itself.
-#' This project heavily utilizes data from Zillow, a real estate destination
-#' for the internet generation. Fortunately, Zillow provides a public API
-#' which provides a convenience to an otherwise tedious task. The table below
-#' is just a sample of what the data looks like. We've removed many of the
-#' columns to make sure the table fits in the page. This is only to provide an
-#' idea of the formatting.
+#' The table below is just a sample of what the training data looks like.
+#' We've removed many of the columns to make sure the table fits in the page.
+#' This is only to provide an idea of the formatting.
 
 #+ echo=False
 conn = sqlite3.connect('zillowdata.db')
@@ -70,13 +82,17 @@ training_raw = pd.read_sql_query(q, conn)
 conn.close()
 
 #+ echo=False, results='tex', caption='Sample of dataset'
-print(training_raw.head().to_latex(columns=[
-    'street',
-    'city',
-    'state',
-    'zip',
-    'lastSoldPrice'
-]))
+print(training_raw.head(10).to_latex(
+    columns=[
+        'street',
+        'city',
+        'zip',
+        'finishedSqFt',
+        'lastSoldDate',
+        'lastSoldPrice'
+    ],
+    index=False
+))
 
 #' Printing the _shape_ attribute shows that we have 2826 observations and 23
 #' columns.
@@ -104,8 +120,9 @@ training_raw.dtypes
 #' suffix standardization (Dr. vs Drive), etc. This proves to be a difficult
 #' task that is beyond the scope of this project. Further, the effects of this
 #' variable is closely related to region. We have chosen to exclude it here
-#' but may be worth exploring further in the future. The state variable can
-#' also be excluded here as we are keeping the scope of this project to WA only.
+#' but may be worth exploring further in the future. Finally, the state
+#' variable can also be excluded here as we are keeping the scope of this
+#' project to WA only.
 
 #+ term=True
 training = training_raw  # Save original data intact
@@ -113,7 +130,35 @@ training.drop(['zpid', 'street', 'state'], axis=1, inplace=True)
 training.dtypes
 
 #' We can see that many of these variables are of type _object_. We'll need to
-#' convert these to the appropriate types.
+#' convert these to the appropriate types. Most of these columns, excluding
+#' date columns, can be converted to numeric.
+
+cols = training.columns[training.columns.isin([
+    'taxAssessmentYear',
+    'taxAssessment',
+    'yearBuilt',
+    'lotSizeSqFt',
+    'finishedSqFt',
+    'bathrooms',
+    'bedrooms',
+    'lastSoldPrice',
+    'zestimate',
+    'zestimateValueChange',
+    'zestimateValueLow',
+    'zestimateValueHigh',
+    'zestimatePercentile'
+])]
+for col in cols:
+    training[col] = pd.to_numeric(training[col])
+
+#' Now let's convert _lastSoldDate_ and _zestimateLastUpdated_ to dates.
+
+cols = training.columns[training.columns.isin([
+    'lastSoldDate',
+    'zestimateLastUpdated'
+])]
+for col in cols:
+    training[col] = pd.to_datetime(training[col], infer_datetime_format=True)
 
 #' Next we need to see which of these variables need to be converted to factor
 #' variables. City, state, zip, FIPScounty, useCode, and region all qualify.
@@ -124,7 +169,7 @@ training.dtypes
 #+ term=True
 training['city'] = training['city'].astype('category')
 training['city'].describe()
-training['zip'] = training['zip'].astype('zip')
+training['zip'] = training['zip'].astype('category')
 training['zip'].describe()
 training['FIPScounty'] = training['FIPScounty'].astype('category')
 training['FIPScounty'].describe()
@@ -138,10 +183,56 @@ training['region'].describe()
 #' which may be too high, however, we will assume that our machine can handle
 #' this for now.
 
+#' Let's take a look at our columns now.
+
+#+ term=True
+training.dtypes
+
+#' Before we convert the categorical columns to dummy variables, let's look
+#' at the correlations compared to the sales price.
+
+#+ term=True
+training.corr()['lastSoldPrice'].sort_values(ascending=False, inplace=False)
+
+#' As suspected, _zestimate_ columns are highly correlated to the sales price.
+#' A _zestimate_ is essentially Zillow's predicted value. Since we are trying
+#' to achieve the same thing in this project, let's not include Zillow's efforts
+#' here.
+
+training.drop(['zestimate', 'zestimateLastUpdated', 'zestimateValueChange',
+               'zestimateValueLow', 'zestimateValueHigh',
+               'zestimatePercentile'], axis=1, inplace=True)
+
+#' Here are the fininshed columns.
+
+#+ term=True
+training.dtypes
+training.describe()
+
+#+ echo=False, results='tex'
+print(training.describe().to_latex(columns=[
+    'taxAssessmentYear',
+    'taxAssessment',
+    'yearBuilt',
+    'lotSizeSqFt',
+    'finishedSqFt',
+    'bathrooms']))
+
+#+ echo=False, results='tex'
+print(training.describe().to_latex(columns=['bedrooms', 'lastSoldPrice']))
+
+#' We can see that the median price in our data set is $577,000 which is quite
+#' high!
+
 #' Finally, let's make the dummy variable conversion. This can easily be
 #' achieved using the _get\_dummies_ function.
 
-#+ term=True
-dummies = pd.get_dummies(training, columns=['city', 'FIPScounty', 'useCode',
-                         'region'], drop_first=True)
-dummies.shape
+training = pd.get_dummies(training, columns=['city', 'zip', 'FIPScounty',
+                                             'useCode', 'region'],
+                          drop_first=True)
+print(training.shape)
+
+#' We have 245 columns as shown above, which we can verify by adding the number
+#' of unique categories - 1 with the number of non-categorical columns.
+
+#' # Training
