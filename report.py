@@ -235,4 +235,19 @@ print(training.shape)
 #' We have 245 columns as shown above, which we can verify by adding the number
 #' of unique categories - 1 with the number of non-categorical columns.
 
+#' ## Feature Engineering
+
+#' Although the given set of features are reasonably decent as a starting point,
+#' we can do better with feature engineering. One of the most important
+#' estimators for a given property's value is its square footage. Of course,
+#' comps are never exactly alike so one way to standardize this is to use
+#' price per square foot. Let's go ahead and add this new feature to our
+#' dataset.
+
 #' # Training
+
+#' Now that we have prepared the data, we can begin the training process. Since
+#' we do not have validation data on hand, we will need to split a portion for
+#' out of sample validation. Let's set asid 20% of the data for just that.
+
+#+ term=True
