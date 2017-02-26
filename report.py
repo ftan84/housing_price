@@ -247,7 +247,9 @@ print(training.shape)
 #' # Training
 
 #' Now that we have prepared the data, we can begin the training process. Since
-#' we do not have validation data on hand, we will need to split a portion for
-#' out of sample validation. Let's set asid 20% of the data for just that.
+#' we do not have new test data on hand, we will need to split a portion for
+#' out of sample validation. Let's set aside 20% of the data for just that. We
+#' achieve this using scikit-learn's _train\_test\_split_ function.
 
 #+ term=True
+
