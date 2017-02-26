@@ -16,21 +16,26 @@
 #' # Introduction
 #' The Greater Seattle Area housing market has gone through a dramatic price
 #' increase in recent years with the median valuation at $609,100, an 11.3%
-#' increase from last year and a 4.7% increase forecasted for the next year[^1].
-#' Because of the dramatic change that has occurred in a short period of
-#' time, it has become increasingly difficult to predict property values. We
-#' believe that a machine learning model can predict a property value with
-#' reasonable accuracy given the property features and the time aspect
-#' (_lastSoldDate_).
+#' increase from last year and a 4.7% increase forecasted for the next
+#' year[^zillowstat]. Because of the dramatic change that has occurred in a
+#' short period of time, it has become increasingly difficult to predict
+#' property values. We believe that a machine learning model can predict a
+#' property value with reasonable accuracy given the property features and
+#' the time aspect (_lastSoldDate_).
 
-#' [^1]: Source: Zillow Data as of February 2017.
+#' [^zillowstat]: Source: Zillow Data as of February 2017.
 
 #+ echo=False
 import numpy as np
 import pandas as pd
 import pprint
 import pweave
+from sklearn import linear_model
+from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import GridSearchCV
 import sqlite3
+
+pd.set_option('display.max_columns', None)
 
 #' # Data Collection and Preprocessing
 #' ## Data Collection Process
@@ -160,6 +165,27 @@ cols = training.columns[training.columns.isin([
 for col in cols:
     training[col] = pd.to_datetime(training[col], infer_datetime_format=True)
 
+#' One problem with the _datetime_ data type is that it will not work with
+#' scikit-learn. So we need to convert this to a numerical type. One way to
+#' resolve this is to separate the date columns into year, month, and day.
+
+training = training.assign(
+    lastSoldDateYear=pd.DatetimeIndex(training['lastSoldDate']).year,
+    lastSoldDateMonth=pd.DatetimeIndex(training['lastSoldDate']).month,
+    lastSoldDateDay=pd.DatetimeIndex(training['lastSoldDate']).day,
+    zestimateLastUpdatedYear=pd.DatetimeIndex(
+        training['zestimateLastUpdated']
+    ).year,
+    zestimateLastUpdatedMonth=pd.DatetimeIndex(
+        training['zestimateLastUpdated']
+    ).month,
+    zestimateLastUpdatedDay=pd.DatetimeIndex(
+        training['zestimateLastUpdated']
+    ).day
+)
+training.drop(['lastSoldDate', 'zestimateLastUpdated'], axis=1, inplace=True)
+training.dtypes
+
 #' Next we need to see which of these variables need to be converted to factor
 #' variables. City, state, zip, FIPScounty, useCode, and region all qualify.
 #' One thing to caution when creating dummy variables is the number of unique
@@ -199,9 +225,11 @@ training.corr()['lastSoldPrice'].sort_values(ascending=False, inplace=False)
 #' to achieve the same thing in this project, let's not include Zillow's efforts
 #' here.
 
-training.drop(['zestimate', 'zestimateLastUpdated', 'zestimateValueChange',
-               'zestimateValueLow', 'zestimateValueHigh',
-               'zestimatePercentile'], axis=1, inplace=True)
+training.drop(['zestimate', 'zestimateLastUpdatedYear',
+               'zestimateLastUpdatedMonth', 'zestimateLastUpdatedDay',
+               'zestimateValueChange', 'zestimateValueLow',
+               'zestimateValueHigh', 'zestimatePercentile'],
+              axis=1, inplace=True)
 
 #' Here are the fininshed columns.
 
@@ -224,6 +252,17 @@ print(training.describe().to_latex(columns=['bedrooms', 'lastSoldPrice']))
 #' We can see that the median price in our data set is $577,000 which is quite
 #' high!
 
+#' As it turns out, we have NaNs in our data as seen below:
+
+print(training.isnull().any())
+
+#' We need to remove these as NaNs will not work in the training process.
+
+training.dropna(inplace=True)
+print(training.isnull().any())
+
+#' ## Dummy Variables
+
 #' Finally, let's make the dummy variable conversion. This can easily be
 #' achieved using the _get\_dummies_ function.
 
@@ -235,21 +274,32 @@ print(training.shape)
 #' We have 245 columns as shown above, which we can verify by adding the number
 #' of unique categories - 1 with the number of non-categorical columns.
 
-#' ## Feature Engineering
-
-#' Although the given set of features are reasonably decent as a starting point,
-#' we can do better with feature engineering. One of the most important
-#' estimators for a given property's value is its square footage. Of course,
-#' comps are never exactly alike so one way to standardize this is to use
-#' price per square foot. Let's go ahead and add this new feature to our
-#' dataset.
 
 #' # Training
 
 #' Now that we have prepared the data, we can begin the training process. Since
 #' we do not have new test data on hand, we will need to split a portion for
-#' out of sample validation. Let's set aside 20% of the data for just that. We
+#' final evaluation. Let's set aside 20% of the data for just that. We
 #' achieve this using scikit-learn's _train\_test\_split_ function.
 
 #+ term=True
+x_train, x_test, y_train, y_test = train_test_split(
+    training.drop('lastSoldPrice', axis=1),
+    training['lastSoldPrice'],
+    test_size=0.2,
+    random_state=1201980
+)
 
+
+#' ## Ridge Regression
+
+#' Ridge regression addresses some of the problems of Ordinary Least Squares by
+#' imposing a penalty on the size of coefficients[^ridge]
+#' [^ridge]: [Scikit-learn Documentation](http://scikit-learn.org/stable/modules/linear_model.html#ridge-regression)
+
+ridge = linear_model.Ridge()
+param_grid = {
+    'alpha': np.arange(0.1, 10, 0.2)
+}
+grid = GridSearchCV(ridge, param_grid, cv=10, n_jobs=-1)
+grid.fit(x_train, y_train)
