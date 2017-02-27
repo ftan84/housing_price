@@ -26,11 +26,12 @@
 #' [^zillowstat]: Source: Zillow Data as of February 2017.
 
 #+ echo=False
+import math
 import numpy as np
 import pandas as pd
 import pprint
 import pweave
-from sklearn import linear_model
+from sklearn import linear_model, svm
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.model_selection import GridSearchCV
 import sqlite3
@@ -290,16 +291,49 @@ x_train, x_test, y_train, y_test = train_test_split(
     random_state=1201980
 )
 
+#' The general plan here is to train several different models, make predictions
+#' for each of those models, and use those predictions to train and predict
+#' a separate ensemble model. In essence, we will have two layers of
+#' training/prediction processes. Each model will be cross-validated with
+#' 10-folds using the K-fold method and will utilize a grid-search to find the
+#' best combination of parameters.
 
 #' ## Ridge Regression
 
 #' Ridge regression addresses some of the problems of Ordinary Least Squares by
-#' imposing a penalty on the size of coefficients[^ridge]
-#' [^ridge]: [Scikit-learn Documentation](http://scikit-learn.org/stable/modules/linear_model.html#ridge-regression)
+#' imposing a penalty on the size of coefficients[^ridge]. We are also building
+#' a grid of alphas that range from 0.1 to 10 in increments of 0.2. Since
+#' we have a relatively small dataset, we can afford to build a large grid.
+
+#' [^ridge]: Scikit-learn Documentation (http://scikit-learn.org/stable/modules/linear_model.html#ridge-regression)
 
 ridge = linear_model.Ridge()
 param_grid = {
-    'alpha': np.arange(0.1, 10, 0.2)
+    'alpha': np.arange(0.1, 10, 0.1)
 }
-grid = GridSearchCV(ridge, param_grid, cv=10, n_jobs=-1)
+grid = GridSearchCV(ridge, param_grid, cv=10, n_jobs=-1,
+                    scoring='neg_mean_squared_error')
 grid.fit(x_train, y_train)
+print(grid.best_params_)
+print(math.sqrt(abs(grid.best_score_)))
+
+#' As we can see, the grid search has found that an alpha of about 7.4 produced
+#' the best RMSE at 198433. This is not nearly as accurate as I would like it
+#' to be but it is a good start. We will need to build models and combine
+#' them in an ensemble. We hope to produce better results from the combined
+#' predictions. Let's store the predictions of this model for now.
+
+predictions = pd.DataFrame(grid.predict(x_train))
+predictions.head()
+
+#' ## Support Vector Machine
+
+svm = svm.SVR()
+param_grid = {
+    'C': np.arange(1.0, 100, 1)
+}
+grid = GridSearchCV(svm, param_grid, cv=10, n_jobs=-1,
+                    scoring='neg_mean_squared_error')
+grid.fit(x_train, y_train)
+print(grid.best_params_)
+print(math.sqrt(abs(grid.best_score_)))
