@@ -31,7 +31,9 @@ import numpy as np
 import pandas as pd
 import pprint
 import pweave
-from sklearn import linear_model, svm
+from sklearn import linear_model, svm, tree
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.model_selection import GridSearchCV
 import sqlite3
@@ -305,7 +307,7 @@ x_train, x_test, y_train, y_test = train_test_split(
 #' a grid of alphas that range from 0.1 to 10 in increments of 0.2. Since
 #' we have a relatively small dataset, we can afford to build a large grid.
 
-#' [^ridge]: Scikit-learn Documentation (http://scikit-learn.org/stable/modules/linear_model.html#ridge-regression)
+#' [^ridge]: Scikit-learn Documentation-Ridge Regressino (http://scikit-learn.org/stable/modules/linear_model.html#ridge-regression)
 
 ridge = linear_model.Ridge()
 param_grid = {
@@ -314,26 +316,156 @@ param_grid = {
 grid = GridSearchCV(ridge, param_grid, cv=10, n_jobs=-1,
                     scoring='neg_mean_squared_error')
 grid.fit(x_train, y_train)
-print(grid.best_params_)
-print(math.sqrt(abs(grid.best_score_)))
+print('Ridge Regression:')
+print('Best params: {}'.format(grid.best_params_))
+print('RMSE: {}'.format(math.sqrt(abs(grid.best_score_))))
 
 #' As we can see, the grid search has found that an alpha of about 7.4 produced
 #' the best RMSE at 198433. This is not nearly as accurate as I would like it
-#' to be but it is a good start. We will need to build models and combine
-#' them in an ensemble. We hope to produce better results from the combined
-#' predictions. Let's store the predictions of this model for now.
+#' to be but it is a good start.
 
-predictions = pd.DataFrame(grid.predict(x_train))
-predictions.head()
 
 #' ## Support Vector Machine
 
 svm = svm.SVR()
 param_grid = {
-    'C': np.arange(1.0, 100, 1)
+    'C': [0.0001, 0.001, 0.1, 1.0, 5]
 }
 grid = GridSearchCV(svm, param_grid, cv=10, n_jobs=-1,
                     scoring='neg_mean_squared_error')
 grid.fit(x_train, y_train)
-print(grid.best_params_)
-print(math.sqrt(abs(grid.best_score_)))
+print('Support Vector Regressor:')
+print('Best params: {}'.format(grid.best_params_))
+print('RMSE: {}'.format(math.sqrt(abs(grid.best_score_))))
+
+
+#' ## Lasso
+
+#' Lasso is a generalized linear model that has a tendency to prefer solutions
+#' with fewer parameter values[^lasso]. Our particular project isn't considered
+#' a high dimensional problem and thus this model should be appropriate.
+
+#' [^lasso]: Scikit-learn Documentation-Lasso (http://scikit-learn.org/stable/modules/linear_model.html#lasso)
+
+lasso = linear_model.Lasso()
+param_grid = {
+    'alpha': [0.001, 0.01, 0.1, 1.0, 5],
+    'max_iter': [5000, 10000]
+}
+grid = GridSearchCV(lasso, param_grid, cv=10, n_jobs=-1,
+                    scoring='neg_mean_squared_error')
+grid.fit(x_train, y_train)
+print('Lasso:')
+print('Best params: {}'.format(grid.best_params_))
+print('RMSE: {}'.format(math.sqrt(abs(grid.best_score_))))
+
+
+#' ## Decision Tree
+
+#' The Decision Tree model is one of the more simple and interpretable models.
+#' We have chosen to include it here for its simplicity.
+
+tree_reg = tree.DecisionTreeRegressor()
+param_grid = {}
+grid = GridSearchCV(tree_reg, param_grid, cv=10, n_jobs=-1,
+                    scoring='neg_mean_squared_error')
+grid.fit(x_train, y_train)
+print('Decision Tree:')
+print('RMSE: {}'.format(math.sqrt(abs(grid.best_score_))))
+
+
+#' ## Elastic Net
+
+#' Elastic Net is another linear model that has features of both Rdige
+#' Regression and Lasso.
+
+enet = linear_model.ElasticNet()
+param_grid = {
+    'alpha': [0.001, 0.01, 0.1, 1.0, 5, 10],
+    'l1_ratio': np.arange(0, 1, 0.1)
+}
+grid = GridSearchCV(enet, param_grid, cv=10, n_jobs=-1,
+                    scoring='neg_mean_squared_error')
+grid.fit(x_train, y_train)
+print('Elastic Net:')
+print('Best params: {}'.format(grid.best_params_))
+print('RMSE: {}'.format(math.sqrt(abs(grid.best_score_))))
+
+
+#' # Ensemble
+
+#' After training multiple individual training models, we see that the results
+#' are less than ideal. The best RMSE of 198433, comes from the Ridge
+#' Regression model. That kind of RMSE is much too large for it to be practical
+#' in real world settings. The below table shows the CV validated RMSEs for our
+#' individual models.
+
+#' | Model | RMSE |
+#' |---|---|
+#' | Ridge Regression | 198433 |
+#' | Support Vector Regression | 526903 |
+#' | Lasso | 205960 |
+#' | Decision Tree | 230903 |
+#' | Elastic Net | 198443 |
+
+#' We think that an ensemble model will yield better results. Fortunately,
+#' scikit-learn provides a very simple, yet effective ensemble classifier,
+#' random forest.
+
+rf = RandomForestRegressor()
+param_grid = {
+    'n_estimators': [1000]
+}
+grid = GridSearchCV(rf, param_grid, cv=10, n_jobs=-1,
+                    scoring='neg_mean_squared_error')
+grid.fit(x_train, y_train)
+print('Random Forest:')
+print('Best params: {}'.format(grid.best_params_))
+print('RMSE: {}'.format(math.sqrt(abs(grid.best_score_))))
+
+#' We see that the RMSE for Random Forest is 180122, better than the rest.
+#' Because of its effectiveness, let's use this estimator for the final
+#' prediction.
+
+prediction = grid.predict(x_test)
+mse = mean_squared_error(y_test, prediction)
+print('Final Out-of-sample RMSE: {}'.format(math.sqrt(abs(mse))))
+
+#' # Conclusion
+
+#' As we anticipated, an ensemble model, in our case, Random Forest, produced
+#' better results than any individual model with an RMSE value of 150472,
+#' though only incrementally better given the set of parameters we used for this
+#' project. We chose to use 1000 estimators, a low value by any standard, to
+#' minimize the training time. The final CV evaluation table is provided below:
+
+#' | Model | RMSE |
+#' |---|---|
+#' | Ridge Regression | 198433 |
+#' | Support Vector Regression | 526903 |
+#' | Lasso | 205960 |
+#' | Decision Tree | 230903 |
+#' | Elastic Net | 198443 |
+#' | Random Forest | 180223 |
+
+#' We have learned that a proper set of parameters can have a significant
+#' impact on the overall quality of the prediction results, regardless of
+#' model is being used. One effective way of searching for the optimal
+#' combination of parameters is to use a Grid Search through Cross Validation.
+#' This method will iterate through the cartesian product of combinations and
+#' cross validate them n-fold times. Although effective and a widely used
+#' strategy, one can clearly see how this may increase training time
+#' significantly. Thus one must be careful when balancing time vs accuracy.
+
+#' A possible alternative to grid search is to use a randomized parameter
+#' search. The idea is similar to grid search but the parameters are chosen
+#' randomly from a distribution. Scikit-learn documentation even states that
+#' randomized parameter selection could have more favorable
+#' properties[^randsearch]
+
+#' Overall, the training process in this project took roughly 30 minutes on my
+#' 2012 Macbook Air running a Linux virtual machine through Vagrant. We are
+#' certain that with more time or more computing resources, we would be able
+#' to produce better results.
+
+#' [^randsearch]: Scikit-learn Documentation (http://scikit-learn.org/stable/modules/grid_search.html#randomized-parameter-optimization)
