@@ -464,8 +464,9 @@ print('Final Out-of-sample RMSE: {}'.format(math.sqrt(abs(mse))))
 #' properties[^randsearch]
 
 #' Overall, the training process in this project took roughly 30 minutes on my
-#' 2012 Macbook Air running a Linux virtual machine through Vagrant. We are
-#' certain that with more time or more computing resources, we would be able
+#' 2012 Macbook Air running a Linux virtual machine through Vagrant. My machine
+#' quickly became mostly unusable after completing all training processes. We
+#' are certain that with more time or more computing resources, we would be able
 #' to produce better results.
 
 #' [^randsearch]: Scikit-learn Documentation (http://scikit-learn.org/stable/modules/grid_search.html#randomized-parameter-optimization)
