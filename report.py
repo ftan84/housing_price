@@ -445,7 +445,7 @@ print('Final Out-of-sample RMSE: {}'.format(math.sqrt(abs(mse))))
 #' | Lasso | 205960 |
 #' | Decision Tree | 230903 |
 #' | Elastic Net | 198443 |
-#' | Random Forest | <% math.sqrt(abs(grid.best_score_)) %> |
+#' | Random Forest | 150757 |
 
 #' We have learned that a proper set of parameters can have a significant
 #' impact on the overall quality of the prediction results, regardless of
