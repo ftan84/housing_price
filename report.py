@@ -422,7 +422,7 @@ print('Random Forest:')
 print('Best params: {}'.format(grid.best_params_))
 print('RMSE: {}'.format(math.sqrt(abs(grid.best_score_))))
 
-#' We see that the RMSE for Random Forest is 180122, better than the rest.
+#' We see that the RMSE for Random Forest is 179921, better than the rest.
 #' Because of its effectiveness, let's use this estimator for the final
 #' prediction.
 
@@ -445,7 +445,7 @@ print('Final Out-of-sample RMSE: {}'.format(math.sqrt(abs(mse))))
 #' | Lasso | 205960 |
 #' | Decision Tree | 230903 |
 #' | Elastic Net | 198443 |
-#' | Random Forest | 150757 |
+#' | Random Forest | 179921 |
 
 #' We have learned that a proper set of parameters can have a significant
 #' impact on the overall quality of the prediction results, regardless of

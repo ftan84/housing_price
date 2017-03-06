@@ -780,7 +780,7 @@ RMSE: 179921.021496
 
 
 
-We see that the RMSE for Random Forest is 180122, better than the rest.
+We see that the RMSE for Random Forest is 179921, better than the rest.
 Because of its effectiveness, let's use this estimator for the final
 prediction.
 
@@ -812,7 +812,7 @@ minimize the training time. The final CV evaluation table is provided below:
 | Lasso | 205960 |
 | Decision Tree | 230903 |
 | Elastic Net | 198443 |
-| Random Forest | 150757 |
+| Random Forest | 179921 |
 
 We have learned that a proper set of parameters can have a significant
 impact on the overall quality of the prediction results, regardless of
