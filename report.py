@@ -433,10 +433,11 @@ print('Final Out-of-sample RMSE: {}'.format(math.sqrt(abs(mse))))
 #' # Conclusion
 
 #' As we anticipated, an ensemble model, in our case, Random Forest, produced
-#' better results than any individual model with an RMSE value of 150472,
-#' though only incrementally better given the set of parameters we used for this
-#' project. We chose to use 1000 estimators, a low value by any standard, to
-#' minimize the training time. The final CV evaluation table is provided below:
+#' better results than any individual model with an out-of-sample RMSE value of
+#' 150472, though only incrementally better given the set of parameters we used
+#' for this project. We chose to use 1500 estimators, a low value by any
+#' standard, to minimize the training time. The final CV evaluation table is
+#' provided below:
 
 #' | Model | RMSE |
 #' |---|---|
